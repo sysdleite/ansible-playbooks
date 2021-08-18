@@ -1,0 +1,31 @@
+---
+default_packages:
+  - ntp
+  - python
+  - tcpdump
+  - wget
+  - openssl
+  - curl
+  - tree
+
+packages_docker_needed:
+  - apt-transport-https
+  - ca-certificates
+  - curl
+  - software-properties-common
+  - python3-pip
+
+docker_packages:
+  - docker-ce
+  - docker-ce-cli
+  - containerd.io
+
+pip_packages:
+  - docker
+  - docker-compose
+  - PyYAML
+  - jsondiff
+
+admin_user: plop
+
+ssh_port: 22

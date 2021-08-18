@@ -1,0 +1,71 @@
+---
+- name: "[CONF] Check Directory for Configurations"
+  file:
+    path: "{{ item }}"
+    state: directory
+  with_items:
+    - "/datas"
+    - "/datas/front"
+    - "/datas/back"
+    - "/datas/it"
+    - "/datas/it/portainer"
+
+- name: "[CONF] Template Configurations Files"
+  template:
+    src: "{{ item }}"
+    dest: "/{{ item }}"
+    owner: root
+    group: root
+    mode: 400
+  with_items:
+    - "datas/front/docker-compose.yml"
+    - "datas/it/docker-compose.yml"
+    - "datas/back/docker-compose.yml"
+
+- name: "[RM] Delete stack"
+  community.docker.docker_stack:
+    name: "{{ item }}"
+    state: absent
+  run_once: yes
+  with_items:
+    - "back"
+    - "front"
+    - "it"
+  ignore_errors: yes
+
+- name: "[NET] Create Networks"
+  community.docker.docker_network:
+    name: "{{ item }}"
+    driver: overlay
+    state: present
+  with_items:
+    - "it"
+    - "front"
+    - "back"
+  run_once: yes
+
+- name: "[STORAGE] Create Volumes"
+  community.docker.docker_volume:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - "consul"
+
+- name: "[PORTAINER] Create Secret Admin"
+  community.docker.docker_secret:
+    name: portainer_admin_pass
+    data: "{{ portainer_admin_pass }}"
+    state: present
+  run_once: yes
+
+- name: "[START] Launch Composes"
+  community.docker.docker_stack:
+     name: "{{ item | basename }}"
+     compose: "{{ item }}/docker-compose.yml"
+     state: present
+     resolve_image: always
+  with_items:
+     - "/datas/front"
+     - "/datas/it"
+     - "/datas/back"
+  run_once: yes

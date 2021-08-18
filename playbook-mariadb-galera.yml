@@ -1,0 +1,8 @@
+- hosts: mariadb-galera
+  gather_facts: yes
+  become: true
+  roles:
+    - basic-setup
+    - snmpd
+    - users
+    - mariadb-galera-cluster

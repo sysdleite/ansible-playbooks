@@ -1,0 +1,10 @@
+---
+- name: Set Docker Stacks
+  become: yes
+  hosts: docker-nodes
+  roles:
+    - basic-setup
+    - snmpd
+    - users
+    - docker-swarm/prerequisites
+    - docker-swarm/swarm-start

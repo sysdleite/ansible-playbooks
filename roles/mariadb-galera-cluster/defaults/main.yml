@@ -1,0 +1,14 @@
+---
+packages:
+  - mariadb-client
+  - mariadb-server
+  - python-mysqldb
+
+root_password: "xxxxxxxxxxx"
+monitoring_password: "xxxxxxxxxx"
+ip_monitoring:
+  - "localhost"
+  - "xx.xx.xx.xx"
+  - "xx.xx.xx.xx"
+
+galera_cluster_name: "galera_preprod"

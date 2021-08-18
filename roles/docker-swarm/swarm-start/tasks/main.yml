@@ -1,0 +1,63 @@
+---
+###################################################
+##########      INIT SWARM CLUSTER      ###########
+###################################################
+
+- name: "[MANAGER] Check if Swarm has already been Initialized"
+  shell: docker node ls
+  register: swarm_status
+  ignore_errors: true
+  tags: swarm
+  when: "'swarm-first-manager' in group_names"
+
+- name: "[MANAGER] Initialize Docker Swarm"
+  shell: >
+        docker swarm init
+        --advertise-addr={{ hostvars[inventory_hostname]['ansible_facts']['eth1']['ipv4']['address'] }}:2377
+  when:
+    - "'swarm-first-manager' in group_names"
+    - swarm_status.rc != 0
+  run_once: true
+  tags: swarm
+
+- name: "[MANAGER] Get the Manager join-token"
+  shell: docker swarm join-token --quiet manager
+  register: manager_token
+  tags: swarm
+  when: "'swarm-first-manager' in group_names"
+
+- name: "[MANAGER] Get the worker join-token"
+  shell: docker swarm join-token --quiet worker
+  register: worker_token
+  tags: swarm
+  when: "'swarm-first-manager' in group_names"
+
+###################################################
+##########      ADD SWARM MANAGERS      ###########
+###################################################
+
+- name: "[MANAGERS] Check if Swarm is Already Initialized"
+  shell: docker node ls
+  register: swarm_status
+  ignore_errors: true
+  tags: swarm
+  when: "'swarm-managers' in group_names"
+
+- name: "[MANAGERS] Add Managers to the Swarm"
+  shell: "docker swarm join --token {{ hostvars[item]['manager_token']['stdout'] }} {{ hostvars[item]['ansible_facts']['eth1']['ipv4']['address'] }}:2377"
+  with_items: "{{ groups['swarm-first-manager'] }}"
+  when:
+    - "'swarm-managers' in group_names"
+    - swarm_status.rc != 0
+  tags: swarm
+
+###################################################
+##########       ADD SWARM WORKERS      ###########
+###################################################
+
+- name: "[WORKERS] Add Workers to the Swarm"
+  shell: "docker swarm join --token {{ hostvars[item]['worker_token']['stdout'] }} {{ hostvars[item]['ansible_facts']['eth1']['ipv4']['address'] }}:2377"
+  with_items: "{{ groups['swarm-first-manager'] }}"
+  ignore_errors: true
+  tags: swarm
+  when: "'swarm-workers' in group_names"

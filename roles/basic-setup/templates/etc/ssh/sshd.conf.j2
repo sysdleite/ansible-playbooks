@@ -1,0 +1,62 @@
+# {{ ansible_managed }}
+
+###################################################
+##########            LISTEN            ###########
+###################################################
+
+Port {{ ssh_port }}
+ListenAddress 0.0.0.0
+
+###################################################
+##########            LOGGING           ###########
+###################################################
+
+SyslogFacility AUTH
+LogLevel INFO
+
+###################################################
+##########       AUTHENTIFICATION       ###########
+###################################################
+
+LoginGraceTime 5m
+PermitRootLogin no
+StrictModes yes
+MaxAuthTries 3
+MaxSessions 10
+
+PubkeyAuthentication yes
+PubkeyAcceptedKeyTypes=+ssh-rsa,ssh-ed25519
+AuthorizedKeysFile	.ssh/authorized_keys
+
+HostbasedAuthentication no
+IgnoreUserKnownHosts no
+IgnoreRhosts yes
+
+PasswordAuthentication no
+PermitEmptyPasswords no
+
+ChallengeResponseAuthentication no
+UsePAM yes
+
+AllowAgentForwarding yes
+AllowTcpForwarding yes
+GatewayPorts no
+X11Forwarding no
+PermitTTY yes
+PrintMotd no
+PrintLastLog no
+TCPKeepAlive yes
+PermitUserEnvironment no
+Compression delayed
+ClientAliveInterval 0
+ClientAliveCountMax 3
+UseDNS no
+PidFile /var/run/sshd.pid
+MaxStartups 10:30:100
+PermitTunnel no
+ChrootDirectory none
+VersionAddendum none
+
+AcceptEnv LANG LC_*
+
+Subsystem	sftp	/usr/lib/openssh/sftp-server

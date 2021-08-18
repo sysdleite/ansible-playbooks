@@ -1,0 +1,23 @@
+---
+- name: "[LOGIN] DockerHub Private"
+  docker_login:
+    username: username
+    password: "{{ dockerhub_token }}"
+
+- name: Remove images
+  community.docker.docker_image:
+    state: absent
+    name: image_name
+    tag: image_tag
+    force_absent: yes
+
+- name: Download images
+  community.docker.docker_image:
+    state: present
+    name: image_name
+    tag: image_tag
+    source: pull
+
+- name: "[LOGOUT] DockerHub Private"
+  docker_login:
+    state: absent

@@ -1,0 +1,28 @@
+# {{ ansible_managed }}
+
+[mysqld]
+
+# MySQL General
+binlog_format=ROW
+default-storage-engine=innodb
+innodb_autoinc_lock_mode=2
+innodb_doublewrite=1
+bind-address=0.0.0.0
+
+# Galera Provider Configuration
+wsrep_on=ON
+wsrep_provider=/usr/lib/galera/libgalera_smm.so
+wsrep_provider_options="gcache.size=2G;socket.checksum=1"
+
+# Galera Synchronization Configuration
+wsrep_sst_method=rsync
+
+# Galera Cluster Configuration
+wsrep_cluster_name="{{ galera_cluster_name }}"
+wsrep_cluster_address="gcomm://{% for host in groups['mariadb-galera'] %}
+{{ hostvars[host]['ansible_facts']['eth1']['ipv4']['address'] }}{% if not loop.last %},{% endif %}
+{%- endfor %}"
+
+# Galera Node Configuration
+wsrep_node_address="{{ hostvars[inventory_hostname]['ansible_facts']['eth1']['ipv4']['address'] }}"
+wsrep_node_name="{{ inventory_hostname }}"

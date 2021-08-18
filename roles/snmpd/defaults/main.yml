@@ -1,0 +1,26 @@
+---
+debian_packages_dependencies:
+  - software-properties-common
+  - python-apt
+
+debian_packages:
+  - snmpd
+  - snmp
+  - libsnmp-dev
+  - snmp-mibs-downloader
+
+centos_packages:
+  - net-snmp
+  - net-snmp-utils
+
+debian_user_snmp_daemon: Debian-snmp
+
+syscontact: admin@xxxxxxxxx
+
+syslocation: "xxxxxxxxxx"
+
+user_snmpv3: "xxxxxxxxx"
+pass_user_snmpv3: xxxxxxx
+
+
+# --snmp-username='xxxxx' --authprotocol='SHA' --authpassphrase='xxxxxxx' --privprotocol='AES' --privpassphrase='xxxxxxxx'

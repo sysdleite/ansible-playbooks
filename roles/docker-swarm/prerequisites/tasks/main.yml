@@ -1,0 +1,132 @@
+---
+
+###################################################
+##########        INSTALL DOCKER        ###########
+###################################################
+
+- name: "[ALL] Install Docker Dependencies"
+  apt:
+    name: "{{ packages_docker_needed }}"
+    state: latest
+    update_cache: yes
+  tags: docker
+
+- name: "[ALL] Get Docker key"
+  apt_key:
+    url: https://download.docker.com/linux/debian/gpg
+    state: present
+  tags: docker
+
+- name: "[ALL] Docker Repository"
+  apt_repository:
+    repo: deb [arch=amd64] https://download.docker.com/linux/debian {{ ansible_lsb.codename|lower }} stable
+    state: present
+    filename: docker
+    update_cache: yes
+  tags: docker
+
+- name: "[ALL] Install Docker-CE"
+  apt:
+    name: "{{ docker_packages }}"
+    state: latest
+    update_cache: yes
+  tags: docker
+
+- name: "[DOCKER] Edit Service for Monitoring"
+  lineinfile:
+    path: "/lib/systemd/system/docker.service"
+    regexp: '(^ExecStart=/usr/bin/dockerd*)'
+    line: "ExecStart=/usr/bin/dockerd -H fd:// -H tcp://{{ hostvars[inventory_hostname]['ansible_facts']['eth1']['ipv4']['address'] }}:2375 --containerd=/run/containerd/containerd.sock"
+    state: present
+  notify: "restart docker"
+
+- name: "[DOCKER] Install Docker-Compose"
+  get_url:
+    url : https://github.com/docker/compose/releases/download/1.29.2/docker-compose-Linux-x86_64
+    dest: /usr/local/bin/docker-compose
+    mode: 'a+x'
+
+- name: "[PIP] Install Docker Module for Python"
+  pip:
+    name: "{{ pip_packages }}"
+
+###################################################
+##########      CREATE ADMIN USER       ###########
+###################################################
+
+- name: "[ALL] Create user Admin"
+  user:
+    name: "{{ admin_user }}"
+    home: "/home/{{ admin_user }}"
+    shell: /bin/bash
+    groups:
+      - docker
+    state: present
+
+- name: "[ALL] Create .ssh directory for Admin User"
+  file:
+    path: "/home/{{ admin_user }}/.ssh"
+    state: directory
+    owner: "{{ admin_user }}"
+    group: "{{ admin_user }}"
+    mode: '0700'
+
+- name: "[ALL] Admin Sudoers only for docker daemon"
+  lineinfile:
+    dest: /etc/sudoers
+    state: present
+    regexp: "^{{ admin_user }}"
+    line: "{{ admin_user }}	ALL=NOPASSWD: /bin/systemctl restart docker.service"
+    validate: 'visudo -cf %s'
+
+- name: "[ADMIN] Generate Admin SSH keys"
+  user:
+    name: "{{ admin_user }}"
+    generate_ssh_key: yes
+    ssh_key_type: ed25519
+    ssh_key_file: "/home/{{ admin_user }}/.ssh/id_ed"
+    ssh_key_comment: "{{ hostvars[inventory_hostname]['ansible_hostname'] }}"
+    force: yes
+  when: "'admin' in group_names"
+
+- name: "[ADMIN] Save the admin's public key"
+  shell: cat "/home/{{ admin_user }}/.ssh/id_ed.pub"
+  register: config_ssh_pub
+  when: "'admin' in group_names"
+
+- name: "[ADMIN] Copy SSH Configuration"
+  template:
+    src: ssh_config.j2
+    dest: "/home/{{ admin_user }}/.ssh/config"
+    owner: "{{ admin_user }}"
+    group: "{{ admin_user }}"
+    mode: 0644
+  when: "'admin' in group_names"
+
+- name: "[ADMIN] Empty Known_hosts"
+  become_user: "{{ admin_user }}"
+  file:
+    state: absent
+    path: ~/.ssh/known_hosts
+  when: "'admin' in group_names"
+
+- name: "[ADMIN] Run ssh-keyscan to add keys to known_hosts"
+  become_user: "{{ admin_user }}"
+  shell: "ssh-keyscan {{ item }} >> ~/.ssh/known_hosts"
+  with_items: "{{ groups['docker-nodes'] }}"
+  when: "'admin' in group_names"
+
+- name: "[ALL] Configure Hosts File"
+  lineinfile:
+    path: /etc/hosts
+    regexp: '.*{{ item }}$'
+    line: "{{ hostvars[item]['ansible_facts']['eth1']['ipv4']['address'] }} {{ item }}"
+    state: present
+  with_items: "{{ groups['docker'] }}"
+
+- name: "[ALL] Authorized_keys Admin"
+  authorized_key:
+    user: "{{ admin_user }}"
+    state: present
+    key: "{{ hostvars[item]['config_ssh_pub']['stdout'] }}"
+  with_items: "{{ groups['admin'] }}"

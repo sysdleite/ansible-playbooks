@@ -1,0 +1,13 @@
+--------------------------------------------------------------------------
+                    This system is managed by Ansible
+--------------------------------------------------------------------------
+NOTE: System and application configuration for this host is managed by
+automated systems. To ensure that any changes you make here are not lost,
+please contact with your system administrators.
+
+{% for item in motd_info %}
+{% for key, value in item.items() | list %}
+{{ key }}{{ value }}
+{% endfor %}
+{% endfor %}
+--------------------------------------------------------------------------

@@ -1,0 +1,12 @@
+---
+- name: Authentification DockerHub
+  become: yes
+  hosts: docker-nodes
+  roles:
+    - docker-stacks-on-swarm/all
+
+- name: Set Docker Stacks
+  become: yes
+  hosts: swarm-managers
+  roles:
+    - docker-stacks-on-swarm/preprod

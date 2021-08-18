@@ -1,0 +1,43 @@
+---
+# Create a group for every user and make that their primary group
+users_create_per_user_group: true
+# If we're not creating a per-user group, then this is the group all users
+# belong to
+users_group: users
+# The default shell for a user if none is specified
+users_default_shell: /bin/bash
+# Create home dirs for new users? Set this to false if you manage home
+# directories in some other way.
+users_create_homedirs: true
+
+sudo_group: "wheel"
+
+# Lists of users to create and delete
+users:
+  - username: user1
+    name: NAME USER 1
+    groups: ['{{ sudo_group }}','ops']
+    uid: 1001
+    ssh_key:
+      - "ssh-rsa xxxxxxxxxxxxxxxxxxxxxxxx user1"
+  - username: user2
+    name: NAME USER 2
+    groups: ['{{ sudo_group }}','dev']
+    uid: 1002
+    ssh_key:
+      - "ssh-rsa xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx user2"
+
+users_deleted: []
+
+# List of groups to create
+# Example:
+#   groups_to_create:
+#     - name: developers
+#       gid: 10000
+groups_to_create:
+  - name: ops
+    gid: 10001
+  - name: dev
+    gid: 10002
+
+authorized_keys_file: ".ssh/authorized_keys"

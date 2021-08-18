@@ -1,0 +1,11 @@
+# {{ ansible_managed }}
+
+{% for host in groups['docker-nodes'] %}
+Host {{ hostvars[host].inventory_hostname }}
+  Hostname {{ hostvars[host].inventory_hostname }}
+  User {{ admin_user }}
+  Port {{ ssh_port }}
+  IdentityFile ~/.ssh/id_ed
+  StrictHostKeyChecking no
+  UserKnownHostsFile /dev/null
+{% endfor %}

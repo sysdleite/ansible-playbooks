@@ -1,0 +1,6 @@
+---
+- name: workers leave the swarm
+  become: yes
+  hosts: docker-nodes
+  roles:
+    - docker-swarm/swarm-leave

@@ -1,0 +1,26 @@
+---
+- name: reload sysctl temp
+  shell: "/sbin/sysctl -w net.ipv6.conf.all.disable_ipv6=1"
+  listen: "reload sysctl temp"
+
+- name: restart ntp
+  service:
+    name: ntp
+    state: restarted
+  listen: "restart ntp"
+
+- name: restart ssh
+  service:
+    name: ssh
+    state: restarted
+  listen: "restart fail2ban"
+
+- name: restart fail2ban
+  service:
+    name: fail2ban
+    state: restarted
+  listen: "restart fail2ban"
+
+- name: restore iptables
+  shell: "iptables-restore < /etc/iptables/rules.v4"
+  listen: "restore iptables"

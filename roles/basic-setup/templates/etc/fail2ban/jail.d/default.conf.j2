@@ -1,0 +1,22 @@
+# {{ ansible_managed }}
+
+[DEFAULT]
+ignorself = true
+ignoreip = {{ ip_certified | join(' ') }}
+bantime = 30m
+findtime = 15m
+maxretry = 3
+
+[sshd]
+enabled = true
+port = {{ ssh_port }}
+
+{% if ansible_fqdn in groups['mariadb'] %}
+[mysqld-auth]
+enabled = true
+{% endif %}
+
+{% if ansible_fqdn in groups['nginx'] %}
+[nginx-http-auth]
+enabled = true
+{% endif %}

@@ -1,0 +1,7 @@
+- hosts: preprod
+  gather_facts: yes
+  become: true
+  roles:
+    - basic-setup
+    - snmpd
+    - users

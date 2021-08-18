@@ -1,0 +1,9 @@
+# {{ ansible_managed }}
+
+### LOCALHOST
+127.0.0.1     localhost
+
+### ALL IPv4
+{% for ip in hostvars[inventory_hostname]['ansible_facts']['all_ipv4_addresses'] %}
+{{ ip }}      {{ ansible_fqdn }}
+{% endfor %}

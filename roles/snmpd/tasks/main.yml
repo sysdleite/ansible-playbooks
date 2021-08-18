@@ -1,0 +1,93 @@
+---
+###################################################
+##########       INSTALL PACKAGES       ###########
+###################################################
+
+- name: "[DEBIAN] Install Dependencies"
+  apt:
+    name: "{{ debian_packages_dependencies }}"
+    state: present
+    update_cache: yes
+  when: ansible_os_family == 'Debian'
+
+- name: "[DEBIAN] Enable APT non-free"
+  shell: "apt-add-repository non-free"
+  when: ansible_os_family == 'Debian'
+
+- name: "[DEBIAN] Install snmpd packages"
+  apt:
+    name: "{{ debian_packages }}"
+    state: present
+    update_cache: yes
+  when: ansible_os_family == 'Debian'
+
+- name: "[REDHAT] Install snmpd packages"
+  apt:
+    name: "{{ debian_packages }}"
+    state: present
+    update_cache: yes
+  when: ansible_os_family == 'RedHat'
+
+- name: "[ALL] Copy scripts extend"
+  copy:
+    src: "usr/local/bin/{{ item }}"
+    dest: "/usr/local/bin/{{ item }}"
+    owner: root
+    group: root
+    mode: 0755
+  with_items:
+    - "check_fail2ban.sh"
+
+###################################################
+##########        CONFIGURATIONS        ###########
+###################################################
+
+- name: "[ALL] Stop SNMPD"
+  service:
+    name: snmpd
+    state: stopped
+
+- name: "[ALL] Create snmpdv3 files si not exist"
+  file:
+    path: /usr/share/snmp/snmpd.conf
+    state: touch
+    mode: '0600'
+    owner: "{{ debian_user_snmp_daemon }}"
+    group: "{{ debian_user_snmp_daemon }}"
+  when: ansible_os_family == 'Debian'
+
+- name: "[ALL] Create User v3"
+  lineinfile:
+    path: /var/lib/snmp/snmpd.conf
+    state: present
+    regexp: "^createUser {{ user_snmpv3 }}"
+    line: "createUser {{ user_snmpv3 }} SHA \"{{ pass_user_snmpv3 }}\" AES \"{{ pass_user_snmpv3 }}\""
+
+- name: "[ALL] Create User v3 - Set RO"
+  lineinfile:
+    path: /usr/share/snmp/snmpd.conf
+    state: present
+    regexp: "^rouser {{ user_snmpv3 }}"
+    line: "rouser {{ user_snmpv3 }}"
+
+- name: "[ALL] Conf snmpd"
+  template:
+    src: "etc/snmp/snmpd.conf.j2"
+    dest: "/etc/snmp/snmpd.conf"
+    owner: root
+    group: root
+    mode: 0600
+
+- name: "[ALL] Start SNMPD"
+  service:
+    name: snmpd
+    state: started
+
+- name: "[ALL] Testing SNMPv3"
+  shell: "snmpwalk -v 3 -l authPriv -u '{{ user_snmpv3 }}' -a SHA -A '{{ pass_user_snmpv3 }}' -x AES -X '{{ pass_user_snmpv3 }}' 127.0.0.1"
+  ignore_errors: no
+
+###################################################
+
+- name: "[ALL] Flush handlers"
+  meta: flush_handlers

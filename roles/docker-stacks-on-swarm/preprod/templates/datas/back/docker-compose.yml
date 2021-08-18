@@ -1,0 +1,85 @@
+---
+version: '3.3'
+
+networks:
+  it:
+    external: true
+  back:
+    external: true
+
+services:
+###################################################
+##########          ERROR-PAGES         ###########
+###################################################
+  error-pages:
+    image: tarampampam/error-pages:1.7.2
+    environment:
+      TEMPLATE_NAME: l7-dark
+    networks:
+      - back
+      - it
+    healthcheck:
+      test: [ "CMD-SHELL", "nc -z 127.0.0.1 8080 || exit 1" ]
+      interval: 60s
+      timeout: 5s
+      retries: 30
+    deploy:
+      mode: global
+      placement:
+        constraints:
+          - node.role == worker
+      resources:
+        limits:
+          cpus: '0.10'
+          memory: 256M
+      labels:
+        - "traefik.enable=true"
+        - "traefik.docker.network=back"
+        - "traefik.frontend.rule=HostRegexp:{catchall:.*}"
+        - "traefik.frontend.priority=1"
+        - "traefik.backend=error"
+        - "traefik.port=8080"
+
+###################################################
+##########           WEBSERVER          ###########
+###################################################
+  whoami:
+    image: "traefik/whoami"
+    networks:
+      - "back"
+      - "it"
+    depends_on:
+      - "front_traefik"
+    volumes:
+      - "/etc/timezone:/etc/timezone:ro"
+      - "/etc/localtime:/etc/localtime:ro"
+    deploy:
+      replicas: 4
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 0
+        window: 0s
+      placement:
+        constraints:
+          - "node.role == worker"
+      labels:
+        - "traefik.enable=true"
+        - "traefik.docker.network=back"
+        - "traefik.port=80"
+        ##### FRONTEND
+        - "traefik.frontend.entryPoints=web,websec"
+        - "traefik.frontend.rule=Host:whoami.{{ suffixe_dns }}"
+        - "traefik.frontend.passHostHeader=true"
+        ##### BACKEND
+        - "traefik.backend.loadbalancer.stickiness=true"
+        - "traefik.backend.loadbalancer.swarm=true"
+        - "traefik.backend.loadbalancer.method=drr"
+        ##### AUTHENTIFICATION
+        - "traefik.frontend.auth.basic.users={{ auth_basic_accounts | join(',') }}"
+        - "traefik.frontend.whiteList.sourceRange={{ ip_certified_admin | join(',') }}"
+        - "traefik.frontend.whiteList.useXForwardedFor=true"
+        ##### CUSTOM ERRORS PAGES
+        - "traefik.frontend.errors.network.backend=error"
+        - "traefik.frontend.errors.network.query=/{status}.html"
+        - "traefik.frontend.errors.network.status=500-511"

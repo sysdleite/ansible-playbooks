@@ -1,0 +1,38 @@
+# {{ ansible_managed }}
+
+### BINDING IP ###
+
+agentAddress  udp:161
+
+### SNMP OID ###
+
+view   systemonly  included   .1.3.6.1.2.1.1
+view   systemonly  included   .1.3.6.1.2.1.25.1
+
+### INFOS ###
+
+sysLocation    {{ syslocation }}
+sysContact     {{ syscontact }}
+sysServices    72
+
+### VAR CHECKS ###
+
+disk       /     10000
+disk       /var  5%
+includeAllDisks  10%
+
+load   12 10 5
+
+### EXTEND SCRIPTS ###
+
+extend f2b-jails    /usr/local/bin/check_fail2ban.sh -j
+{% if ansible_fqdn in groups['mariadb'] %}
+extend mycheck  /usr/local/bin/mycheck.sh
+{% endif %}
+
+### OTHERS ###
+
+master          agentx
+disableSNMPv1   yes
+disableSNMPv2c  yes
+disableSNMPv3   no

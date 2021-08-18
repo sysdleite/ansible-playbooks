@@ -1,0 +1,13 @@
+---
+ssl_mail: "ssl@mydomain.net"
+suffixe_dns: "mydomain.net"
+project: "myproject"
+
+portainer_admin_pass: "xxxxxxxxx"
+
+auth_basic_accounts:
+  - "admin:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  - "user:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+ip_certified_admin:
+  - "xxx.xxx.xxx.xxx/32"

@@ -1,0 +1,48 @@
+---
+version: '3.3'
+
+networks:
+  it:
+    external: true
+  front:
+    external: true
+
+secrets:
+  portainer_admin_pass:
+    external: true
+
+services:
+###################################################
+##########          PORTAINER           ###########
+###################################################
+  portainer:
+    image: portainer/portainer-ce:latest
+    restart: unless-stopped
+    command: -H unix:///var/run/docker.sock --admin-password-file /run/secrets/portainer_admin_pass
+    networks:
+      - it
+      - front
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+      - /datas/it/portainer:/data
+    secrets:
+      - portainer_admin_pass
+    deploy:
+      placement:
+        constraints:
+          - "node.role == manager"
+      labels:
+        - "traefik.enable=true"
+        - "traefik.docker.network=front"
+        - "traefik.port=9000"
+        - "traefik.frontend.rule=Host:portainer.{{ suffixe_dns }}"
+        - "traefik.frontend.entryPoints=web,websec"
+        ##### AUTHENTIFICATION
+        - "traefik.frontend.whiteList.sourceRange={{ ip_certified_admin | join(',') }}"
+        - "traefik.frontend.whiteList.useXForwardedFor=true"
+        ##### CUSTOM ERRORS PAGES
+        - "traefik.frontend.errors.network.backend=error"
+        - "traefik.frontend.errors.network.query=/{status}.html"
+        - "traefik.frontend.errors.network.status=500-511"

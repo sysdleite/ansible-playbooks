@@ -1,0 +1,145 @@
+---
+###################################################
+##########             HOST             ###########
+###################################################
+
+- name: "[HOST] Setup file hosts - Add comment"
+  lineinfile:
+    path: "/etc/hosts"
+    regexp: '(^### CLUSTER MARIADB GALERA)'
+    line: "\n### CLUSTER MARIADB GALERA"
+    state: present
+
+- name: "[HOST] Setup file hosts - Add ip/hosts"
+  lineinfile:
+    path: "/etc/hosts"
+    line: "{{ hostvars[item]['ansible_facts']['eth1']['ipv4']['address'] }} {{ item }}"
+    state: present
+  with_items: "{{ groups['mariadb-galera'] }}"
+
+###################################################
+##########          INSTALLS            ###########
+###################################################
+
+- name: "[APT] Install packages"
+  apt:
+    name: "{{ packages }}"
+    state: present
+    update_cache: yes
+  when: ansible_os_family == 'Debian'
+
+###################################################
+##########            USERS             ###########
+###################################################
+
+- name: "[CHECK] If MySQL Users already configured"
+  stat:
+    path: "/root/.my.cnf"
+  register: mysql_users
+
+- name: "[USERS] Root my.cnf"
+  template:
+    src: "root/my.cnf.j2"
+    dest: "/root/.my.cnf"
+    owner: root
+    group: root
+    mode: 0400
+
+- name: "[USERS] Removes all anonymous user accounts"
+  mysql_user:
+    name: ''
+    host_all: yes
+    state: absent
+  ignore_errors: yes
+  when: not mysql_users.stat.exists
+
+- name: "[USERS] Set MySQL Root Password"
+  mysql_user:
+    login_host: 'localhost'
+    login_user: "root"
+    login_password: ""
+    name: "root"
+    password: "{{ root_password }}"
+    state: present
+  ignore_errors: yes
+  when: not mysql_users.stat.exists
+
+- name: "[USERS] Always Update MySQL Root Password"
+  mysql_user:
+    config_file: "/root/.my.cnf"
+    name: "root"
+    password: "{{ root_password }}"
+    state: present
+    update_password: always
+  ignore_errors: yes
+
+- name: "[USERS] Create Monitoring"
+  mysql_user:
+    config_file: "/root/.my.cnf"
+    name: "monitoring"
+    host: "{{ item }}"
+    password: "{{ monitoring_password }}"
+    state: present
+    update_password: always
+    priv: '*.*:SELECT,CREATE USER,REPLICATION CLIENT,SHOW DATABASES,SUPER,PROCESS'
+  with_items: "{{ ip_monitoring }}"
+  ignore_errors: yes
+
+- name: "[USERS] Grant Monitoring MySQL Database"
+  mysql_user:
+    config_file: "/root/.my.cnf"
+    name: "monitoring"
+    host: "{{ item }}"
+    append_privs: yes
+    priv: 'mysql.*:CREATE,INSERT'
+  with_items: "{{ ip_monitoring }}"
+  ignore_errors: yes
+
+###################################################
+##########           CLUSTER            ###########
+###################################################
+
+- name: "[CHECK] If Master is already Initialized"
+  stat:
+    path: "/etc/mysql/conf.d/already_init"
+  register: already_init
+
+- name: "[MARIADB] Stop Service"
+  service:
+    name: mariadb
+    state: stopped
+  when: not already_init.stat.exists
+
+- name: "[CONF] MariaDB Configuration File"
+  template:
+    src: "etc/mysql/mariadb.conf.d/50-server.cnf.j2"
+    dest: "/etc/mysql/mariadb.conf.d/50-server.cnf"
+    owner: root
+    group: root
+    mode: 0644
+
+- name: "[CONF] Galera Configuration File"
+  template:
+    src: "etc/mysql/conf.d/galera.cnf.j2"
+    dest: "/etc/mysql/conf.d/galera.cnf"
+    owner: root
+    group: root
+    mode: 0644
+
+- name: "[GALERA] Start On Primary Node"
+  shell: galera_new_cluster
+  when:
+    - "'mariadb-galera-first-node' in group_names"
+    - not already_init.stat.exists
+
+- name: "[MARIADB] Start Service"
+  service:
+    name: mariadb
+    state: started
+  when: "'mariadb-galera-first-node' not in group_names"
+
+- name: Create the file, if it doesnt exist already
+  file:
+    path: "/etc/mysql/conf.d/already_init"
+    state: touch
+  when: not already_init.stat.exists
